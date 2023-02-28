@@ -1,9 +1,11 @@
 package com.hust.seeingeye.data
 
+import android.graphics.Bitmap
 import android.media.Image
 import android.util.Log
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
+import com.hust.seeingeye.YoloV5Ncnn
 import java.nio.ByteOrder
 
 class FrameData(
@@ -14,6 +16,20 @@ class FrameData(
     companion object {
         private const val TAG = "FrameData"
     }
+    var used = false
+    val cameraHeight
+        get() = cameraImage.height
+    val cameraWidth
+        get() = cameraImage.width
+    val depthHeight
+        get() = depthImage.height
+    val depthWidth
+        get() = depthImage.width
+
+    var objects: Array<YoloV5Ncnn.Obj> = arrayOf()
+    var bitmap: Bitmap? = null
+
+
     /** Obtain the depth in millimeters for depthImage at coordinates ([x], [y]). */
     fun getMillimetersDepth(x: Int, y: Int): Int {
         // The depth image has a single plane, which stores depth for each
@@ -41,10 +57,12 @@ class FrameData(
         }
         val depthCoordinates = (textureCoordinates[0] * depthImage.width).toInt() to
                 (textureCoordinates[1] * depthImage.height).toInt()
-        Log.d(TAG, "getCameraDepth: camera_x${x}," +
-                "camera_y${y}," +
-                "depth_x${depthCoordinates.first}," +
-                "depth_y${depthCoordinates.second}")
+        Log.d(
+            TAG, "getCameraDepth: camera_x${x}," +
+                    "camera_y${y}," +
+                    "depth_x${depthCoordinates.first}," +
+                    "depth_y${depthCoordinates.second}"
+        )
         return getMillimetersDepth(depthCoordinates.first, depthCoordinates.second)
     }
 

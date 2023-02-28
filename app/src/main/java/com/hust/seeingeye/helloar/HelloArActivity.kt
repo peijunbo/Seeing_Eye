@@ -15,23 +15,25 @@
  */
 package com.hust.seeingeye.helloar
 
+import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.ar.core.Config
 import com.google.ar.core.Config.InstantPlacementMode
 import com.google.ar.core.Session
-
-import com.google.ar.core.exceptions.CameraNotAvailableException
-import com.google.ar.core.exceptions.UnavailableApkTooOldException
-import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
-import com.google.ar.core.exceptions.UnavailableSdkTooOldException
-import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
+import com.google.ar.core.exceptions.*
+import com.hust.seeingeye.R
 import com.hust.seeingeye.common.helpers.*
 import com.hust.seeingeye.common.samplerender.SampleRender
 import com.hust.seeingeye.viewmodel.Yolov5ViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using the
@@ -46,6 +48,8 @@ class HelloArActivity : AppCompatActivity() {
     lateinit var arCoreSessionHelper: ARCoreSessionLifecycleHelper
     lateinit var view: HelloArView
     lateinit var renderer: HelloArRenderer
+    lateinit var detectView: SurfaceView // 结果绘制view
+    lateinit var detectHolder: SurfaceHolder
 
     val instantPlacementSettings = InstantPlacementSettings()
     val depthSettings = DepthSettings()
@@ -85,6 +89,9 @@ class HelloArActivity : AppCompatActivity() {
         view = HelloArView(this)
         lifecycle.addObserver(view)
         setContentView(view.root)
+        // 绑定结果view
+        detectView = findViewById(R.id.detectview)
+        detectHolder = detectView.holder
 
         // Sets up an example renderer using our HelloARRenderer.
         SampleRender(view.surfaceView, renderer, assets)
@@ -92,10 +99,24 @@ class HelloArActivity : AppCompatActivity() {
         depthSettings.onCreate(this)
         instantPlacementSettings.onCreate(this)
 
+
         //强制打开depth
         depthSettings.setUseDepthForOcclusion(true)
         // 配置yolov5
         viewModel.initYolov5(this)
+        lifecycleScope.launch(Dispatchers.Main) {
+            viewModel.uiState.collect {
+                if (it != null) {
+                    val canvas = detectHolder.lockCanvas()
+                    val paint = Paint()
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = 4f
+                    canvas.drawBitmap(it, 0f, 0f, paint)
+                    detectHolder.unlockCanvasAndPost(canvas)
+                }
+            }
+        }
+        viewModel.startDetect()
     }
 
     // Configure the session, using Lighting Estimation, and Depth mode.

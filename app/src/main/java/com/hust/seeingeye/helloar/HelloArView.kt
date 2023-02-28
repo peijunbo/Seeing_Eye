@@ -35,19 +35,21 @@ class HelloArView(val activity: HelloArActivity) : DefaultLifecycleObserver {
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview)
   val settingsButton =
     root.findViewById<ImageButton>(R.id.settings_button).apply {
-      setOnClickListener { v ->
-        PopupMenu(activity, v).apply {
-          setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-              R.id.depth_settings -> launchDepthSettingsMenuDialog()
-              R.id.instant_placement_settings -> launchInstantPlacementSettingsMenuDialog()
-              else -> null
-            } != null
-          }
-          inflate(R.menu.settings_menu)
-          show()
-        }
-      }
+      // 更改点击事件为播放音频
+      setOnClickListener {  }
+//      setOnClickListener { v ->
+//        PopupMenu(activity, v).apply {
+//          setOnMenuItemClickListener { item ->
+//            when (item.itemId) {
+//              R.id.depth_settings -> launchDepthSettingsMenuDialog()
+//              R.id.instant_placement_settings -> launchInstantPlacementSettingsMenuDialog()
+//              else -> null
+//            } != null
+//          }
+//          inflate(R.menu.settings_menu)
+//          show()
+//        }
+//      }
     }
 
   val session
