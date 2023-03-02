@@ -11,27 +11,30 @@ import java.nio.ByteOrder
 class FrameData(
     val frame: Frame,
     val cameraImage: Image,
-    val depthImage: Image
+    val depthImage: Image?
 ) {
     companion object {
         private const val TAG = "FrameData"
+        const val NO_DEPTH_IMAGE = -1
     }
+
     var used = false
     val cameraHeight
         get() = cameraImage.height
     val cameraWidth
         get() = cameraImage.width
     val depthHeight
-        get() = depthImage.height
+        get() = depthImage?.height
     val depthWidth
-        get() = depthImage.width
+        get() = depthImage?.width
 
     var objects: Array<YoloV5Ncnn.Obj> = arrayOf()
-    var bitmap: Bitmap? = null
+    lateinit var bitmap: Bitmap
 
 
     /** Obtain the depth in millimeters for depthImage at coordinates ([x], [y]). */
-    fun getMillimetersDepth(x: Int, y: Int): Int {
+    private fun getMillimetersDepth(x: Int, y: Int): Int {
+        if (depthImage == null) return -1
         // The depth image has a single plane, which stores depth for each
         // pixel as 16-bit unsigned integers.
         val plane = depthImage.planes[0]
@@ -42,6 +45,7 @@ class FrameData(
     }
 
     fun getCameraDepth(x: Int, y: Int): Int {
+        if (depthImage == null) return -1
         val cpuCoordinates = floatArrayOf(x.toFloat(), y.toFloat())
         val textureCoordinates = FloatArray(2)
         frame.transformCoordinates2d(
@@ -66,8 +70,15 @@ class FrameData(
         return getMillimetersDepth(depthCoordinates.first, depthCoordinates.second)
     }
 
+    fun getPixelIntensity(): Double {
+        val rgb = frame.lightEstimate.environmentalHdrMainLightIntensity
+        Log.d(TAG, "getPixelIntensity: ${rgb.size}")
+        val y = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+        return y
+    }
+
     fun close() {
         cameraImage.close()
-        depthImage.close()
+        depthImage?.close()
     }
 }

@@ -116,7 +116,6 @@ class HelloArActivity : AppCompatActivity() {
                 }
             }
         }
-        viewModel.startDetect()
     }
 
     // Configure the session, using Lighting Estimation, and Depth mode.

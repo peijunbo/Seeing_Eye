@@ -299,6 +299,9 @@ class HelloArRenderer(val activity: HelloArActivity) :
 
         val camera = frame.camera
 
+        // TODO 非跟踪状态触发提示
+
+
         // Update BackgroundRenderer state to match the depth settings.
         try {
             backgroundRenderer.setUseDepthVisualization(
@@ -327,7 +330,6 @@ class HelloArRenderer(val activity: HelloArActivity) :
         if (camera.trackingState == TrackingState.TRACKING && shouldGetDepthImage) {
             try {
                 val depthImage = frame.acquireDepthImage16Bits()
-                Log.d(TAG, "onDrawFrame: acquireDepthImage")
                 val cameraImage = frame.acquireCameraImage()
                 val myDepthImage = frame.acquireDepthImage16Bits()
                 activity.viewModel.updateFrame(
