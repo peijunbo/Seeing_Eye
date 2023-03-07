@@ -1,27 +1,23 @@
 package com.hust.seeingeye.viewmodel
 
 import android.app.Activity
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Paint
+import android.graphics.*
 import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.SoundPool
+import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.Lifecycle.State
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hust.seeingeye.R
 import com.hust.seeingeye.SeeingEyeApp
-import com.hust.seeingeye.Utils.ImageUtil
+import com.hust.seeingeye.utils.ImageUtil
 import com.hust.seeingeye.YoloV5Ncnn
 import com.hust.seeingeye.data.DetectionObj
 import com.hust.seeingeye.data.DetectionResult
 import com.hust.seeingeye.data.FrameData
+import com.hust.seeingeye.utils.SoundUtil
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 class Yolov5ViewModel : ViewModel() {
 
@@ -31,40 +27,53 @@ class Yolov5ViewModel : ViewModel() {
 
 
     private val yolo = YoloV5Ncnn() // yolov5模型对象
-
     private var latestFrameData: FrameData? = null // 最近的一帧画面
 
     private lateinit var soundPool: SoundPool
-
-    private val audioResources = listOf(
-        R.raw.bottle,
-    )
-
+    private val soundIdMap = hashMapOf<Int, Int>() // rawId to duration
+    private val rawToSoundIdMap = hashMapOf<Int, Int>()
+    // TODO test
     private val audios = hashMapOf<Int, Int>()
-
+    private var soundIsReady = false
+    var targetObjLabel = "bottle" // 记录当前识别对象
     val uiState = MutableStateFlow<Bitmap?>(null)
 
 
+    /**
+     * 加载Yolov5与音频
+     */
     fun initYolov5(activity: Activity) {
         yolo.Init(activity.assets)
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_UNKNOWN)
-            .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
         soundPool = SoundPool.Builder()
-            .setMaxStreams(audioResources.size)
+            .setMaxStreams(SoundUtil.soundRawMap.size)
             .setAudioAttributes(audioAttributes)
             .build()
-        for (resId in audioResources) {
-            val soundId = soundPool.load(SeeingEyeApp.context, resId, 1)
-            audios[resId] = soundId
+        // 将所有音频添加到map
+        viewModelScope.launch {
+            for (rawId in SoundUtil.soundRawMap.values) {
+                val soundId = soundPool.load(SeeingEyeApp.context, rawId, 1)
+                val uri =
+                    Uri.parse("android.resource://" + SeeingEyeApp.context.packageName + "/" + rawId)
+                val mediaPlayer = MediaPlayer()
+                mediaPlayer.setDataSource(SeeingEyeApp.context, uri)
+                mediaPlayer.setAudioAttributes(audioAttributes)
+                mediaPlayer.prepare()
+                soundIdMap[soundId] = mediaPlayer.duration
+                rawToSoundIdMap[rawId] = soundId
+            }
+            soundIsReady = true
+            Log.d(TAG, "initYolov5: sound is ready")
         }
     }
 
     fun updateFrame(data: FrameData) {
         val frameData = latestFrameData
         if (frameData == null) {
-            startDetect()
+            startDetection()
         }
         if (frameData != null && !frameData.used) {
             latestFrameData?.close()
@@ -74,27 +83,39 @@ class Yolov5ViewModel : ViewModel() {
         Log.d(TAG, "updateFrame: $y")
     }
 
-    fun startDetect() {
+    fun startDetection() {
         viewModelScope.launch {
             while (true) {
                 val frameData = latestFrameData
                 if (frameData != null && !frameData.used) {
+                    latestFrameData?.used = true
                     frameData.used = true
                     detect(frameData)
-                    if (frameData.objects.isNotEmpty()) {
+                    if (frameData.objects.isNotEmpty() && soundIsReady) {
                         // TODO 修改函数后在这里检查结果并播放语音
                         val result = frameData.getDetectionResult()
+                        val rawIds = SoundUtil.genRawIdsFromResult(result, targetObjLabel)
+                        playResultSound(rawIds)
                         uiState.value = result.bitmap
                     } else {
                         // TODO 没有检测结果时的提示
                     }
                     frameData.close()
                 }
-                delay(2000) // 等待2s
+                delay(5000) // 等待2s
             }
         }
     }
 
+    fun playResultSound(rawIds: List<Int>) {
+        viewModelScope.launch {
+            rawIds.forEach {
+                Log.d(TAG, "playResultSound: ${rawIds.size}")
+                soundPool.play(rawToSoundIdMap[it] ?: 0, 1f, 1f, 0, 0, 1f)
+                delay(soundIdMap[rawToSoundIdMap[it] ?: 0]?.toLong() ?: 0)
+            }
+        }
+    }
 
     private fun FrameData.getDetectionResult(): DetectionResult {
         val data: FrameData = this
@@ -191,8 +212,10 @@ class Yolov5ViewModel : ViewModel() {
 
     }
 
+
+    // TODO test
     fun audioTest() {
-        for (resId in audioResources) {
+        for (resId in SoundUtil.soundRawMap.values) {
             val soundId = audios[resId]
             if (soundId != null) {
                 soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
@@ -201,3 +224,10 @@ class Yolov5ViewModel : ViewModel() {
     }
 
 }
+
+private data class Sound(
+    val rawId: Int,
+    val soundId: Int,
+    val duration: Int,
+    val label: String
+)

@@ -5,7 +5,7 @@ import com.hust.seeingeye.YoloV5Ncnn
 
 class DetectionResult(
     val bitmap: Bitmap,
-    objects: List<DetectionObj>
+    val objects: List<DetectionObj>
 ) {
 }
 

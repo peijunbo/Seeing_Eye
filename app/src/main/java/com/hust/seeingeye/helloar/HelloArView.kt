@@ -33,12 +33,8 @@ import com.hust.seeingeye.common.helpers.TapHelper
 class HelloArView(val activity: HelloArActivity) : DefaultLifecycleObserver {
     val root = View.inflate(activity, R.layout.activity_main, null)
     val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview)
-    val settingsButton =
-        root.findViewById<ImageButton>(R.id.settings_button).apply {
-            // 更改点击事件为播放音频
-            setOnClickListener {
-                activity.viewModel.audioTest()
-            }
+//    val settingsButton =
+//        root.findViewById<ImageButton>(R.id.settings_button).apply {
 //      setOnClickListener { v ->
 //        PopupMenu(activity, v).apply {
 //          setOnMenuItemClickListener { item ->
@@ -51,8 +47,7 @@ class HelloArView(val activity: HelloArActivity) : DefaultLifecycleObserver {
 //          inflate(R.menu.settings_menu)
 //          show()
 //        }
-//      }
-        }
+//      } }
 
     val session
         get() = activity.arCoreSessionHelper.session

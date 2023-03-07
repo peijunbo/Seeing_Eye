@@ -349,7 +349,8 @@ class HelloArRenderer(val activity: HelloArActivity) :
         }
 
         // Handle one tap per frame.
-        handleTap(frame, camera)
+        // Disable tap
+        // handleTap(frame, camera)
 
         // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
         trackingStateHelper.updateKeepScreenOnFlag(camera.trackingState)
